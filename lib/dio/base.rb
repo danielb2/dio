@@ -43,14 +43,26 @@ module Dio
       ap @request.params
       ap @request.path
       controller, action = @request.path.sub(/^\//, '').split('/')
-      controller ||= :default
-      action ||= :index
-      load "#{settings.root}/#{controller}.rb"
+      route(controller || :home, action || :index)
+      # controller ||= :default
+      # action ||= :index
+      # load "#{settings.root}/#{controller}.rb"
+      # 
+      # klass = constantize(controller).new
+      # ap klass
+      # klass.send(action)
+      # 
+      # [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
+    end
 
+    #--------------------------------------------------------------------------
+    def route(controller, action)
+      load "#{settings.root}/#{controller}.rb"
+      
       klass = constantize(controller).new
       ap klass
       klass.send(action)
-
+      
       [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
     end
 
