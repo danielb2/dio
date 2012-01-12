@@ -31,9 +31,10 @@ module Dio
     end
 
     def invoke(action)
-      ap "invoke(#{action.inspect})"
+      puts "invoke(#{action.inspect})"
       method = router.match(@request, action)
       puts "router match => #{method.inspect}"
+      ap @request.params
       __send__(method || action)
     end
 

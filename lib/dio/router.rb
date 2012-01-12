@@ -17,10 +17,13 @@ module Dio
     end
 
     def match(request, action)
-      routing_table = @rules[request.method]
+      routing_table = @rules[request.request_method]
       routing_table.each do |path, method|
+        # Causes undefined method `params='
+        # request.params = { :controller => :test, :action => :cancel, :id => 123 }
         return method if path =~ /^\/#{action}/
       end
+      nil
     end
   end
 end

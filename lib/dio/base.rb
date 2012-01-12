@@ -10,11 +10,6 @@ module Dio
   PORT = 3131
 
   class Request < Rack::Request
-    def method
-      [ :get, :post, :put, :delete, :head ].each do |m|
-        return m if __send__("#{m}?")
-      end
-    end
   end
 
   class Response < Rack::Response
