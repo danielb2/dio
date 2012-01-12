@@ -3,8 +3,10 @@ class Test < Dio::Controller
   # routes :restful, :only => [:index, :new]
 
   routes do
+    get "/index"           => :index
     get "/list"            => :list
     post "/cancel/:id"     => :cancel
+    post "/restore/:id"    => :restore
     # get    "/:self"      => :index
     # get    "/:self/new"  => :new
     # post   "/:self"      => :create
@@ -14,11 +16,19 @@ class Test < Dio::Controller
     # delete "/:self/:id"  => :destroy
   end
 
+  def index
+    puts "test/index"
+  end
+
   def list
     puts "test/list"
   end
 
   def cancel
     puts "test/cancel"
+  end
+
+  def restore
+    puts "test/restore"
   end
 end

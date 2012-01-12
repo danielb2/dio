@@ -3,6 +3,7 @@ require 'awesome_print'
 
 module Dio
   class Router
+    attr_accessor :rules
 
     def initialize
       @rules ||= Hash.new { |hash, key| hash[key] = {} }
@@ -11,8 +12,12 @@ module Dio
     [:get, :post, :put, :delete].each do |method|
       define_method method do |key, value|
         @rules[method][key] = value
-        ap @rules
+        # ap @rules
       end
+    end
+
+    def match(request, action)
+      nil
     end
   end
 end

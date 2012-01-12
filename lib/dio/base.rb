@@ -10,6 +10,11 @@ module Dio
   PORT = 3131
 
   class Request < Rack::Request
+    def method
+      [ :get, :post, :put, :delete, :head ].each do |m|
+        return m if __send__("#{m}?")
+      end
+    end
   end
 
   class Response < Rack::Response
@@ -17,6 +22,8 @@ module Dio
 
   class Base
     include Dio::Utils
+
+    attr_accessor :environment, :request, :response, :params
 
     # Set configuration value. All we do is define two accessor methods that
     # return the requested value (as is and boolean).
@@ -36,33 +43,23 @@ module Dio
 
     #--------------------------------------------------------------------------
     def call(env)
-      @env      = env
-      @request  = Request.new(env)
-      @response = Response.new
-      ap @response
+      @environment, @request, @response = env, Request.new(env), Response.new
+      @params = @request.params
       ap @request.params
       ap @request.path
       controller, action = @request.path.sub(/^\//, '').split('/')
-      route(controller || :home, action || :index)
-      # controller ||= :default
-      # action ||= :index
-      # load "#{settings.root}/#{controller}.rb"
-      # 
-      # klass = constantize(controller).new
-      # ap klass
-      # klass.send(action)
-      # 
-      # [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
+      dispatch(controller || :home, action || :index)
     end
 
     #--------------------------------------------------------------------------
-    def route(controller, action)
-      load "#{settings.root}/#{controller}.rb"
-      
-      klass = constantize(controller).new
-      ap klass
-      klass.send(action)
-      
+    def dispatch(controller, action)
+      load "#{settings.root}/#{controller}.rb"      # TODO: Handle load error
+      klass = constantize(controller).new(self)     # TODO: handle missing class.
+      klass.send(:invoke, action)
+      # ap klass
+      # klass.send(action)
+      ap @response
+
       [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
     end
 
