@@ -17,24 +17,10 @@ module Dio
     end
 
     def match(request, action)
-      nil
+      routing_table = @rules[request.method]
+      routing_table.each do |path, method|
+        return method if path =~ /^\/#{action}/
+      end
     end
   end
 end
-
-# class TestController < Dio::Controller
-#   # routes :restful, :except => :destroy
-#   routes :restful, :only => [:index, :new]
-# 
-#   routes do
-#     get "/list"            => :list
-#     post "/cancel/:id"     => :cancel
-#     # get    "/:self"      => :index
-#     # get    "/:self/new"  => :new
-#     # post   "/:self"      => :create
-#     # get    "/:self/:id"  => :show
-#     # get    "/:self/edit" => :edit
-#     # put    "/:self/:id"  => :update
-#     # delete "/:self/:id"  => :destroy
-#   end
-# end
