@@ -41,8 +41,35 @@ module Dio
     class << self
       attr_accessor :router
 
+      # routes do
+      #   verb pattern => action
+      # end
+      #
+      # Where +pattern+ is one of the following:
+      #
+      #   "/hello"              # Static.
+      #   "/hello/:id"          # With required named parameters.
+      #   "/hello/*/world/*"    # With required wildcard parameters, params[:wildcard]
+      #   "/hello.?:format?"    # With optional parameters.
+      #   /\/hello\/([\w+])/    # Regular expression.
+      #
+      # The +action+ is either:
+      #
+      #  :method                # Public controller method to invoke.
+      #  lambda { }             # Block that returns :method to invoke.
+      #
+      #--------------------------------------------------------------------------
       def routes(group = nil, scope = {}, &block)
         puts "routes(#{group.inspect}, #{scope.inspect})"
+        if group
+          named_routes(group, scope)
+        else
+          anonymous_routes(&block)
+        end
+      end
+
+      #--------------------------------------------------------------------------
+      def anonymous_routes(&block)
         @router ||= begin
           router = Dio::Router.new
           self.class.instance_eval do
@@ -56,9 +83,11 @@ module Dio
           end
           router
         end
+        yield
+      end
 
-        yield if block_given?
-
+      #--------------------------------------------------------------------------
+      def named_routes(group, scope = {})
         if group == :restful
           only   = scope[:only]   ? Array(scope[:only])   : [ :index, :new, :create, :show, :edit, :update, :destroy ]
           except = scope[:except] ? Array(scope[:except]) : []

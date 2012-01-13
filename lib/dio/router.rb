@@ -9,6 +9,7 @@ module Dio
       @rules ||= Hash.new { |hash, key| hash[key] = {} }
     end
 
+    #--------------------------------------------------------------------------
     [:get, :post, :put, :delete].each do |method|
       define_method method do |key, value|
         @rules[method][key] = value
@@ -16,6 +17,7 @@ module Dio
       end
     end
 
+    #--------------------------------------------------------------------------
     def match(request, action)
       routing_table = @rules[request.request_method]
       routing_table.each do |path, method|

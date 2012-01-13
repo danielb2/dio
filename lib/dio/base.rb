@@ -39,11 +39,14 @@ module Dio
     #--------------------------------------------------------------------------
     def call(env)
       @environment, @request, @response = env, Request.new(env), Response.new
-      @params = @request.params
-      ap @request.params
+      @params = universal_nested_hash(@request.params)
+      ap @params
       ap @request.path
-      controller, action = @request.path.sub(/^\//, '').split('/')
-      dispatch(controller || :home, action || :index)
+      @params[:controller], @params[:action] = @request.path.sub(/^\//, '').split('/')
+      @params[:controller] ||= :home
+      @params[:action]     ||= :index
+      ap @params
+      dispatch(@params[:controller], @params[:action])
     end
 
     #--------------------------------------------------------------------------
