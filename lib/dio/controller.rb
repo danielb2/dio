@@ -30,12 +30,12 @@ module Dio
       self.class.router
     end
 
-    def invoke(action)
-      puts "invoke(#{action.inspect})"
-      method = router.match(@request, action)
-      puts "router match => #{method.inspect}"
-      ap @request.params
-      __send__(method || action)
+    def route!
+      puts "route!(#{params.inspect})"
+      # method = router.match(@request, action)
+      # puts "router match => #{method.inspect}"
+      # ap @request.params
+      # __send__(method || action)
     end
 
     class << self
@@ -73,11 +73,10 @@ module Dio
         @router ||= begin
           router = Dio::Router.new
           self.class.instance_eval do
-            [ :get, :post, :put, :delete ].each do |method|
-              define_method method do |rule|
-                key, value = rule.to_a.flatten
-                name = self.name.sub("Controller", "").downcase
-                router.__send__(method, key.sub(":self", name), value)
+            [ :get, :post, :put, :delete ].each do |verb|
+              define_method verb do |rule|
+                pattern, action = rule.to_a.flatten
+                router.__send__(verb, pattern, action)
               end
             end
           end

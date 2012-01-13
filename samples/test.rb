@@ -3,32 +3,30 @@ class Test < Dio::Controller
   # routes :restful, :only => [:index, :new]
 
   routes do
-    get "/index"           => :index
-    get "/list"            => :list
-    post "/cancel/:id"     => :cancel
-    post "/restore/:id"    => :restore
-    # get    "/:self"      => :index
-    # get    "/:self/new"  => :new
-    # post   "/:self"      => :create
-    # get    "/:self/:id"  => :show
-    # get    "/:self/edit" => :edit
-    # put    "/:self/:id"  => :update
-    # delete "/:self/:id"  => :destroy
+    get "/:action/:id/*" => :index
+    get "/list"       => :list
+    get "/cancel/:id" => :cancel
+    # get    "/"      => :index
+    # get    "/new"   => :new
+    # post   "/"      => :create
+    # get    "/:id"   => :show
+    # get    "/edit"  => :edit
+    # put    "/:id"   => :update
+    # delete "/:id"   => :destroy
   end
 
   def index
     puts "test/index"
+    ap params
   end
 
   def list
     puts "test/list"
+    ap params
   end
 
   def cancel
     puts "test/cancel"
-  end
-
-  def restore
-    puts "test/restore"
+    ap params
   end
 end

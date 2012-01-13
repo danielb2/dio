@@ -42,18 +42,17 @@ module Dio
       @params = universal_nested_hash(@request.params)
       ap @params
       ap @request.path
-      @params[:controller], @params[:action] = @request.path.sub(/^\//, '').split('/')
+      @params[:controller] = $1 if @request.path =~ /\/(\w+)/
       @params[:controller] ||= :home
-      @params[:action]     ||= :index
       ap @params
-      dispatch(@params[:controller], @params[:action])
+      dispatch!
     end
 
     #--------------------------------------------------------------------------
-    def dispatch(controller, action)
-      load "#{settings.root}/#{controller}.rb"      # TODO: Handle load error
-      klass = constantize(controller).new(self)     # TODO: handle missing class.
-      klass.send(:invoke, action)
+    def dispatch!
+      load "#{settings.root}/#{@params[:controller]}.rb"      # TODO: Handle load error => fall back to :home controller.
+      klass = constantize(@params[:controller]).new(self)     # TODO: handle missing class.
+      klass.send(:route!)
       # ap klass
       # klass.send(action)
       ap @response
