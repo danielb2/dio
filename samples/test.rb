@@ -6,6 +6,7 @@ class Test < Dio::Controller
     get "/:action/*/:id/*" => :index
     get "/list"          => :list
     get "/cancel/:id"    => :cancel
+    any "/xexe"          => :xexe
 
     # get    "/"      => :index
     # get    "/new"   => :new
