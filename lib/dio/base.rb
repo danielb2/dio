@@ -40,26 +40,38 @@ module Dio
     def call(env)
       @environment, @request, @response = env, Request.new(env), Response.new
       @params = universal_nested_hash(@request.params)
-      ap @params
-      ap @request.path
       @params[:controller] = $1 if @request.path =~ /\/(\w+)/
       @params[:controller] ||= :home
+      ap @request.path
       ap @params
       dispatch!
     end
 
     #--------------------------------------------------------------------------
     def dispatch!
-      load "#{settings.root}/#{@params[:controller]}.rb"      # TODO: Handle load error => fall back to :home controller.
-      klass = constantize(@params[:controller]).new(self)     # TODO: handle missing class.
-      klass.send(:route!)
-      # ap klass
-      # klass.send(action)
+      controller = load_controller
+      controller.__send__(:route!)
       ap @response
 
       [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
     ensure
-      klass.__send__(:router).reset! if klass
+      controller.__send__(:router).reset! if controller
+    end
+
+    # Load controller file and create an instance of controller class. Note
+    # that in development mode controller file gets reloaded with each request
+    # whereas in production it gets required once.
+    #--------------------------------------------------------------------------
+    def load_controller
+      controller_file_name = "#{settings.root}/#{@params[:controller]}.rb"
+      if settings.mode == :development
+        puts "LOADING #{controller_file_name}"
+        load controller_file_name
+      else
+        puts "REQUIRING #{controller_file_name}"
+        require controller_file_name
+      end
+      constantize(@params[:controller]).new(self)     # TODO: handle missing class.
     end
 
     # Run the Dio app as a self-hosted server using Thin, Mongrel or WEBrick.
@@ -96,14 +108,14 @@ module Dio
 
     #--------------------------------------------------------------------------
     def detect_rack_handler
-      %w[ thin mongrel webrick ].each do |server_name|
+      %w[ thin puma mongrel webrick ].each do |server_name|
         begin
           return Rack::Handler.get(server_name.to_s)
         rescue LoadError
         rescue NameError
         end
       end
-      fail "Server handler (thin, mongrel, webrick) not found."
+      fail "Server handler (thin, puma, mongrel, webrick) not found."
     end
 
     #--------------------------------------------------------------------------
@@ -116,5 +128,6 @@ module Dio
     # Default settings.
     #--------------------------------------------------------------------------
     set :root, nil  # The actual value is set when the App < Dio::Base
+    set :mode, :development
   end
 end
