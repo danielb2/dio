@@ -5,6 +5,10 @@ module Dio
     attr_accessor :rules
 
     def initialize
+      reset!
+    end
+
+    def reset!
       @rules = Hash.new { |hash, key| hash[key] = [] }
     end
 

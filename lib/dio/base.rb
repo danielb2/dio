@@ -58,6 +58,8 @@ module Dio
       ap @response
 
       [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
+    ensure
+      klass.__send__(:router).reset! if klass
     end
 
     # Run the Dio app as a self-hosted server using Thin, Mongrel or WEBrick.
