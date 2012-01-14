@@ -3,9 +3,10 @@ class Test < Dio::Controller
   # routes :restful, :only => [:index, :new]
 
   routes do
-    get "/:action/:id/*" => :index
-    get "/list"       => :list
-    get "/cancel/:id" => :cancel
+    get "/:action/*/:id/*" => :index
+    get "/list"          => :list
+    get "/cancel/:id"    => :cancel
+
     # get    "/"      => :index
     # get    "/new"   => :new
     # post   "/"      => :create
@@ -27,6 +28,11 @@ class Test < Dio::Controller
 
   def cancel
     puts "test/cancel"
+    ap params
+  end
+
+  def dynamic
+    puts "test/dynamic"
     ap params
   end
 end

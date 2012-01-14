@@ -16,6 +16,7 @@ module Dio
 
     def initialize(app)
       @request, @response, @params = app.request, app.response, app.params
+      self.class.routes(:default)
       self.class.routes(:restful) unless routes?
     end
 
@@ -32,10 +33,10 @@ module Dio
 
     def route!
       puts "route!(#{params.inspect})"
-      # method = router.match(@request, action)
-      # puts "router match => #{method.inspect}"
-      # ap @request.params
-      # __send__(method || action)
+      action = router.match(request, params)
+      puts "router match => #{action.inspect}"
+      ap params
+      __send__(action)
     end
 
     class << self
@@ -73,7 +74,7 @@ module Dio
         @router ||= begin
           router = Dio::Router.new
           self.class.instance_eval do
-            [ :get, :post, :put, :delete ].each do |verb|
+            [ :get, :post, :put, :delete, :any ].each do |verb|
               define_method verb do |rule|
                 pattern, action = rule.to_a.flatten
                 router.__send__(verb, pattern, action)
@@ -87,7 +88,9 @@ module Dio
 
       #--------------------------------------------------------------------------
       def named_routes(group, scope = {})
-        if group == :restful
+        if group == :default
+          any "/:action?/?:id?" => :dynamic
+        elsif group == :restful
           only   = scope[:only]   ? Array(scope[:only])   : [ :index, :new, :create, :show, :edit, :update, :destroy ]
           except = scope[:except] ? Array(scope[:except]) : []
 
