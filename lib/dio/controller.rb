@@ -16,28 +16,40 @@ module Dio
 
     def initialize(app)
       @request, @response, @params = app.request, app.response, app.params
-      self.class.routes :default
+      set_router_rules
     end
 
     private
 
+    # Move routing rules cached by the class to the router instance that is
+    # part of incoming request. The cache gets cleared once the transfer is
+    # complete so that the next time class gets loaded its cache is empty.
     #--------------------------------------------------------------------------
-    def router
-      self.class.router
+    def set_router_rules
+      self.class.rules.each do |rule|
+        request.router.__send__(*rule)
+      end
+      #
+      # Append two default rules.
+      #
+      request.router.any "/", :index
+      request.router.any "/:action/?:id?", lambda { |params| params[:action] }
+      # ap request.router.rules
+    ensure
+      self.class.rules = []
     end
 
     #--------------------------------------------------------------------------
     def route!
       puts "route!(#{params.inspect})"
-      action = router.match(request, params)
+      action = request.router.match(request, params)
       puts "router match => #{action.inspect}"
       ap params
       __send__(action)
     end
 
-
     class << self
-      attr_reader :router
+      attr_accessor :rules
       #
       # routes do
       #   verb pattern => action
@@ -59,17 +71,15 @@ module Dio
       #------------------------------------------------------------------------
       def routes(group = nil, scope = {}, &block)
         puts "routes(#{group.inspect}, #{scope.inspect})"
-        @router ||= begin
-          router = Dio::Router.new
+        @rules ||= begin
           self.class.instance_eval do
             [ :get, :post, :put, :delete, :any ].each do |verb|
               define_method verb do |rule|
-                pattern, action = rule.flatten
-                router.__send__(verb, pattern, action)
+                @rules << [ verb, *rule.flatten ]
               end
             end
           end
-          router
+          []
         end
 
         if group
@@ -81,8 +91,7 @@ module Dio
 
       #--------------------------------------------------------------------------
       def named_routes(group, scope = {})
-        case group
-        when :restful
+        if group == :restful
           #
           # routes :restful, :except => :delete
           # routes :restful, :only => [ :index, :new ]
@@ -100,9 +109,6 @@ module Dio
           post   "/"     => :create  if only.include?(:create)  && !except.include?(:create)
           get    "/new"  => :new     if only.include?(:new)     && !except.include?(:new)
           get    "/"     => :index   if only.include?(:index)   && !except.include?(:index)
-        when :default
-          router.default :any, "/:action/?:id?" => lambda { |params| params[:action] }
-          router.default :any, "/" => :index
         end
       end
     end

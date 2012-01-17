@@ -10,6 +10,12 @@ module Dio
   PORT = 3131
 
   class Request < Rack::Request
+    attr_reader :router
+
+    def initialize(env)
+      @router = Dio::Router.new
+      super(env)
+    end
   end
 
   class Response < Rack::Response
@@ -54,8 +60,6 @@ module Dio
       ap @response
 
       [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
-    ensure
-      controller.__send__(:router).reset! if controller
     end
 
     # Load controller file and create an instance of controller class. Note

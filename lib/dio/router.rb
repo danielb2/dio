@@ -23,10 +23,7 @@ module Dio
           end
           pattern = /^#{pattern}$/
         end
-        #
-        # Prepend a new rule so it gets evaluated first.
-        #
-        @rules[verb].unshift(:pattern => pattern, :keys => keys, :action => action)
+        @rules[verb] << { :pattern => pattern, :keys => keys, :action => action }
       end
     end
 
