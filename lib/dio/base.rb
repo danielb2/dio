@@ -83,19 +83,13 @@ module Dio
       end
     end
 
-    # Load controller file and create an instance of controller class. Note
-    # that in development mode controller file gets reloaded with each request
-    # whereas in production it gets required once.
+    # Load controller file and create an instance of controller class.
     #--------------------------------------------------------------------------
     def load_controller
       controller_file_name = "#{settings.root}/#{@params[:controller]}.rb"
-      if settings.mode == :development
-        puts "LOADING #{controller_file_name}"
-        load controller_file_name
-      else
-        puts "REQUIRING #{controller_file_name}"
-        require controller_file_name
-      end
+      # TODO: track mktime and use require if the file hasn't changed.
+      puts "Loading #{controller_file_name}"
+      load controller_file_name
       constantize(@params[:controller]).new(self)     # TODO: handle missing class.
     end
 
@@ -153,6 +147,5 @@ module Dio
     # Default settings.
     #--------------------------------------------------------------------------
     set :root, nil  # The actual value is set when the App < Dio::Base
-    set :mode, :development
   end
 end
