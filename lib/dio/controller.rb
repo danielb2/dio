@@ -1,3 +1,4 @@
+require "json"
 # Free-form routes:
 #
 # routes do
@@ -21,11 +22,41 @@ module Dio
 
     private
 
+    @@after_filter_is_running = false
+
+    #--------------------------------------------------------------------------
+    def self.method_added(method)
+      puts "instance method #{method.inspect} added\n\n"
+      if self.public_instance_methods.include?(method) && !@@after_filter_is_running
+        add_json_renderer_for(method)
+      end
+    end
+
+    #--------------------------------------------------------------------------
+    def self.add_json_renderer_for(method)
+      @@after_filter_is_running = true
+      alias_method :"original_#{method}", method            # Save the original method.
+      remove_method method                                  # Now remove it.
+      define_method method do                               # Redefine the method with the method we've just removed.
+        status = send :"original_#{method}"                 # Invoke the saved method.
+                                                            # The code we want to execute after invoking the method.
+        return status unless response.status == 200 && response.body.empty?
+
+        vars = instance_variables - [:@request, :@response, :@params]
+        hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
+        response.headers["Content-Type"] = "application/json"
+        response.body = hash.to_json
+      end
+    ensure
+      @@after_filter_is_running = false
+    end
+
     # Move routing rules cached by the class to the router instance that is
     # part of incoming request. The cache gets cleared once the transfer is
     # complete so that the next time class gets loaded its cache is empty.
     #--------------------------------------------------------------------------
     def set_router_rules
+      self.class.rules ||= []
       self.class.rules.each do |rule|
         request.router.__send__(*rule)
       end

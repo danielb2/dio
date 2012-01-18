@@ -1,5 +1,5 @@
 module Dio
-  module Utils
+  module Helpers
 
     private
 

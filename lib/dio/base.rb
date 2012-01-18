@@ -22,7 +22,7 @@ module Dio
   end
 
   class Base
-    include Dio::Utils
+    include Dio::Helpers
 
     attr_accessor :environment, :request, :response, :params
 
@@ -57,9 +57,12 @@ module Dio
     def dispatch!
       controller = load_controller
       controller.__send__(:route!)
-      ap @response
+      ap response.status
+      ap response.headers
+      ap response.body
 
-      [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
+      [ response.status, response.headers, response.body ]
+      # [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
     end
 
     # Load controller file and create an instance of controller class. Note
