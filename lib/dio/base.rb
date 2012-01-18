@@ -21,6 +21,9 @@ module Dio
   class Response < Rack::Response
   end
 
+  class NotFound < NoMethodError
+  end
+
   class Base
     include Dio::Helpers
 
@@ -51,6 +54,7 @@ module Dio
       ap @request.path
       ap @params
       dispatch!
+      [ response.status, response.headers, response.body ]
     end
 
     #--------------------------------------------------------------------------
@@ -60,9 +64,23 @@ module Dio
       ap response.status
       ap response.headers
       ap response.body
+    rescue Exception => e
+      salvage!(e)
+    end
 
-      [ response.status, response.headers, response.body ]
-      # [ 200, { "Content-Type" => "text/html" }, [ "<pre>Hello World</pre>" ]]
+    def salvage!(e)
+      ap e
+      ap e.backtrace
+      if NotFound === e
+        response.status = 404
+        response.body = "<h1>#{response.status} - Not Found</h1>"
+      else
+        response.status = 500 unless response.status.between? 400, 599
+        response.body = "<h1>#{response.status} - #{e.class}: #{e.message}</h1>"
+        if response.status >= 500 # Show backtrace for server errros.
+          response.body << "<pre>" << e.backtrace.join("\n  ") << "</pre>"
+        end
+      end
     end
 
     # Load controller file and create an instance of controller class. Note

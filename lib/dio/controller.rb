@@ -76,7 +76,11 @@ module Dio
       action = request.router.match(request, params)
       puts "router match => #{action.inspect}"
       ap params
-      __send__(action)
+      if public_methods.include?(action.to_sym) && respond_to?(action)
+        public_send(action) # Route only to public methods.
+      else
+        raise NotFound
+      end
     end
 
     class << self

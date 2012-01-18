@@ -18,6 +18,11 @@ class Home < Dio::Controller
     response.body = "home/new"
   end
 
+  def err
+    puts "HAND-RAISING ERROR..."
+    undefined_local_variable
+  end
+
   private
   def post_action
     puts "--- POST ACTION AFTER FILTER ---"

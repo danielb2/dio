@@ -1,0 +1,4 @@
++ Basic error handling (404, etc)
+- Serving static files
+- Before and after filters
+- supports :json, :xml, :html in controllers
