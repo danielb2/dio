@@ -19,7 +19,7 @@ module Dio
         unless pattern.is_a?(Regexp)                            # Use pattern as is if it's a regular expression.
           pattern = pattern.gsub(/:(\w+)|\*/) do                # Match all named parameters and '*'s.
             keys << ($1 || :wildcard)                           # Save named parameter or :wildcard for '*' match.
-            $1 ? "([^/?#]+)" : "(.+?)"                          # Replace named parameter or '*' with appropriate matchers.
+            $1 ? "([^/?#.]+)" : "(.+?)"                         # Replace named parameter or '*' with appropriate matchers.
           end
           pattern = /^#{pattern}$/
         end

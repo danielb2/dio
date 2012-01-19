@@ -3,6 +3,17 @@ module Dio
 
     private
 
+    def static?
+      if request.get? || request.head?
+        public_directory = File.expand_path(File.join(settings.root, "public"))
+        static = File.expand_path(public_directory + URI.unescape(request.path_info))
+        if File.file?(static) && File.readable?(static)
+          environment["dio.static_file"] = static
+        end
+      end
+      !!environment["dio.static_file"]
+    end
+
     #--------------------------------------------------------------------------
     def constantize(str)
       camel_cased = str.to_s.downcase.gsub(/\/(.?)/) { "::#{$1.upcase}" }.gsub(/(?:^|_)(.)/) { $1.upcase }

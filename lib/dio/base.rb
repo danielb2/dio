@@ -59,21 +59,26 @@ module Dio
 
     #--------------------------------------------------------------------------
     def dispatch!
-      controller = load_controller
-      controller.__send__(:route!)
-      ap response.status
-      ap response.headers
-      ap response.body
+      if static?
+        serve_static
+      else
+        controller = load_controller
+        controller.__send__(:route!)
+        ap response.status
+        ap response.headers
+        ap response.body
+      end
     rescue Exception => e
       salvage!(e)
     end
 
+    #--------------------------------------------------------------------------
     def salvage!(e)
       ap e
       ap e.backtrace
       if NotFound === e
         response.status = 404
-        response.body = "<h1>#{response.status} - Not Found</h1>"
+        response.body = "<h1>#{response.status} - Not Found</h1><p>The requested URL #{request.path} was not found on this server."
       else
         response.status = 500 unless response.status.between? 400, 599
         response.body = "<h1>#{response.status} - #{e.class}: #{e.message}</h1>"
@@ -91,6 +96,24 @@ module Dio
       puts "Loading #{controller_file_name}"
       load controller_file_name
       constantize(@params[:controller]).new(self)     # TODO: handle missing class.
+    rescue LoadError
+      raise NotFound
+    end
+
+    #--------------------------------------------------------------------------
+    def serve_static
+      response.headers['Content-Disposition'] = 'inline'
+      file = Rack::File.new("")                   # Root is empty, path is full file spec.
+      file.path = environment["dio.static_file"]
+      response.status, headers, response.body =
+        if file.method(:serving).arity == 0
+          file.serving                            # Older Rack doesn't accept a parameter.
+        else
+          file.serving(environment)
+        end
+      headers.each { |key, value| response.headers[key] ||= value }
+    rescue Errno::ENOENT
+      raise NotFound
     end
 
     # Run the Dio app as a self-hosted server using Thin, Mongrel or WEBrick.

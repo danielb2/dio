@@ -64,7 +64,7 @@ module Dio
       # Append two default rules.
       #
       request.router.any "/", :index
-      request.router.any "/:action/?:id?", lambda { |params| params[:action] }
+      request.router.any "/:action/?:id?.?:format?", lambda { |params| params[:action] }
       # ap request.router.rules
     ensure
       self.class.rules = []
