@@ -21,36 +21,6 @@ module Dio
     end
 
     private
-
-    @@after_hook_is_running = false
-
-    #--------------------------------------------------------------------------
-    def self.method_added(method)
-      puts "instance method #{method.inspect} added"
-      if self.public_instance_methods.include?(method) && !@@after_hook_is_running
-        add_json_renderer_for(method)
-      end
-    end
-
-    #--------------------------------------------------------------------------
-    def self.add_json_renderer_for(method)
-      @@after_hook_is_running = true
-      alias_method :"original_#{method}", method            # Save the original method.
-      remove_method method                                  # Now remove it.
-      define_method method do                               # Redefine the method with the method we've just removed.
-        status = send :"original_#{method}"                 # Invoke the saved method.
-                                                            # The code we want to execute after invoking the method.
-        return status unless response.status == 200 && response.body.empty?
-
-        vars = instance_variables - [:@request, :@response, :@params]
-        hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
-        response.headers["Content-Type"] = "application/json"
-        response.body = hash.to_json
-      end
-    ensure
-      @@after_hook_is_running = false
-    end
-
     # Move routing rules cached by the class to the router instance that is
     # part of incoming request. The cache gets cleared once the transfer is
     # complete so that the next time class gets loaded its cache is empty.
@@ -73,19 +43,24 @@ module Dio
     #--------------------------------------------------------------------------
     def route!
       puts "route!(#{params.inspect})"
-      action = request.router.match(request, params)
+      action = request.router.match(request, params).to_sym
       puts "router match => #{action.inspect}"
       ap params
 
-      invoke(:before, action) if self.class.hooks[:before].any?
+      invoke(:before, action) if hooks(:before).any?
       if public_methods.include?(action.to_sym) && respond_to?(action)
         public_send(action) # Route only to public methods.
-        invoke(:after, action) if self.class.hooks[:after].any?
+        invoke(:after, action) if hooks(:after).any?
       else
         raise NotFound
       end
     ensure
       self.class.hooks = nil
+    end
+
+    #--------------------------------------------------------------------------
+    def hooks(before_or_after)
+      self.class.hooks ? self.class.hooks[before_or_after] : {}
     end
 
     #--------------------------------------------------------------------------
@@ -102,6 +77,36 @@ module Dio
     #--------------------------------------------------------------------------
     class << self
       attr_accessor :rules, :hooks
+
+      #--------------------------------------------------------------------------
+      def method_added(method)
+        puts "instance method #{method.inspect} added"
+        if public_instance_methods.include?(method) && !@adding_method
+          begin
+            @adding_method = true
+            add_json_renderer_for(method)
+          ensure
+            @adding_method = false
+          end
+        end
+      end
+
+      #--------------------------------------------------------------------------
+      def add_json_renderer_for(method)
+        alias_method :"original_#{method}", method            # Save the original method.
+        remove_method method                                  # Now remove it.
+        define_method method do                               # Redefine the method with the method we've just removed.
+          status = send :"original_#{method}"                 # Invoke the saved method.
+                                                              # The code we want to execute after invoking the method.
+          return status unless response.status == 200 && response.body.empty?
+
+          vars = instance_variables - [:@request, :@response, :@params]
+          hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
+          response.headers["Content-Type"] = "application/json"
+          response.body = hash.to_json
+        end
+      end
+
       #
       # routes do
       #   verb pattern => action
@@ -124,13 +129,13 @@ module Dio
       def routes(group = nil, scope = {}, &block)
         puts "routes(#{group.inspect}, #{scope.inspect})"
         @rules ||= begin
-          # self.class.instance_eval do
+          self.class.instance_eval do
             [ :get, :post, :put, :delete, :any ].each do |verb|
               define_method verb do |rule|
                 @rules << [ verb, *rule.flatten ]
               end
             end
-          # end
+          end
           []
         end
 

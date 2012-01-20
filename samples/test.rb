@@ -2,6 +2,8 @@ class Test < Dio::Controller
   # routes :restful, :except => :destroy
   # routes :restful, :only => [:index, :new]
 
+  before :say_hi, :only => :cancel
+
   routes do
     get "/:action/*/:id/*" => :index
     get "/list"          => :list
@@ -35,5 +37,10 @@ class Test < Dio::Controller
   def dynamic
     puts "test/dynamic"
     ap params
+  end
+
+  private
+  def say_hi
+    puts "HI (CANCEL ONLY)"
   end
 end
