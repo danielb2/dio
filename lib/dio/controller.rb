@@ -124,13 +124,13 @@ module Dio
       def routes(group = nil, scope = {}, &block)
         puts "routes(#{group.inspect}, #{scope.inspect})"
         @rules ||= begin
-          self.class.instance_eval do
+          # self.class.instance_eval do
             [ :get, :post, :put, :delete, :any ].each do |verb|
               define_method verb do |rule|
                 @rules << [ verb, *rule.flatten ]
               end
             end
-          end
+          # end
           []
         end
 
