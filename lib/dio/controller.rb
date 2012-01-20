@@ -22,19 +22,19 @@ module Dio
 
     private
 
-    @@after_filter_is_running = false
+    @@after_hook_is_running = false
 
     #--------------------------------------------------------------------------
     def self.method_added(method)
-      puts "instance method #{method.inspect} added\n\n"
-      if self.public_instance_methods.include?(method) && !@@after_filter_is_running
+      puts "instance method #{method.inspect} added"
+      if self.public_instance_methods.include?(method) && !@@after_hook_is_running
         add_json_renderer_for(method)
       end
     end
 
     #--------------------------------------------------------------------------
     def self.add_json_renderer_for(method)
-      @@after_filter_is_running = true
+      @@after_hook_is_running = true
       alias_method :"original_#{method}", method            # Save the original method.
       remove_method method                                  # Now remove it.
       define_method method do                               # Redefine the method with the method we've just removed.
@@ -48,7 +48,7 @@ module Dio
         response.body = hash.to_json
       end
     ensure
-      @@after_filter_is_running = false
+      @@after_hook_is_running = false
     end
 
     # Move routing rules cached by the class to the router instance that is
@@ -76,15 +76,32 @@ module Dio
       action = request.router.match(request, params)
       puts "router match => #{action.inspect}"
       ap params
+
+      invoke(:before, action) if self.class.hooks[:before].any?
       if public_methods.include?(action.to_sym) && respond_to?(action)
         public_send(action) # Route only to public methods.
+        invoke(:after, action) if self.class.hooks[:after].any?
       else
         raise NotFound
       end
+    ensure
+      self.class.hooks = nil
     end
 
+    #--------------------------------------------------------------------------
+    def invoke(before_or_after, action)
+      puts "invoke(#{before_or_after.inspect}, #{action.inspect})"
+      self.class.hooks[before_or_after].each do |hook|
+        next if hook[:only] && !Array(hook[:only]).include?(action)
+        next if hook[:except] && Array(hook[:except]).include?(action)
+        puts "invoking #{hook[:method].inspect}"
+        __send__(hook[:method])
+      end
+    end
+
+    #--------------------------------------------------------------------------
     class << self
-      attr_accessor :rules
+      attr_accessor :rules, :hooks
       #
       # routes do
       #   verb pattern => action
@@ -121,6 +138,15 @@ module Dio
           named_routes(group, scope)
         else
           yield # routes do ... end
+        end
+      end
+
+      #--------------------------------------------------------------------------
+      [ :before, :after ].each do |hook|
+        define_method hook do |method, scope = {}|
+          puts "#{hook}: #{method.inspect}"
+          @hooks ||= { :before => [], :after => [] }
+          @hooks[hook] << { :method => method }.merge(scope)
         end
       end
 

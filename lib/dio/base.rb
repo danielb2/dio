@@ -76,6 +76,7 @@ module Dio
     def salvage!(e)
       ap e
       ap e.backtrace
+      response.headers["Content-Type"] = "text/html"
       if NotFound === e
         response.status = 404
         response.body = "<h1>#{response.status} - Not Found</h1><p>The requested URL #{request.path} was not found on this server."

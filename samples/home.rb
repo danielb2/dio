@@ -9,6 +9,9 @@ class Home < Dio::Controller
   # end
   # puts "done invoking before_filter block"
 
+  before :say_hello, :only => :index
+  after :say_good_bye, :except => :index
+
   def index
     @data = { :home => :index }
   end
@@ -24,6 +27,14 @@ class Home < Dio::Controller
   end
 
   private
+  def say_hello
+    puts "-> Hello"
+  end
+
+  def say_good_bye
+    puts "-> Good Bye"
+  end
+
   def post_action
     puts "--- POST ACTION AFTER FILTER ---"
   end
