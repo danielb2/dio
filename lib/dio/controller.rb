@@ -70,7 +70,11 @@ module Dio
         next if hook[:only] && !Array(hook[:only]).include?(action)
         next if hook[:except] && Array(hook[:except]).include?(action)
         puts "invoking #{hook[:method].inspect}"
-        __send__(hook[:method])
+        case hook[:method]
+          when Symbol, String then __send__(hook[:method])
+          when Proc then hook[:method].call(self)
+          else raise "Invalid #{before_or_after} hook"
+        end
       end
     end
 
@@ -145,13 +149,29 @@ module Dio
           yield # routes do ... end
         end
       end
-
+      #
+      # Define +before+ and +after+ hook methods. The hooks get executed in the
+      # order received before or after the current action. Examples:
+      #
+      #   before :hello, :only => :index
+      #   after :cheers, :goodbye, :except => [ :new, :destroy ]
+      #
+      # With a block - accepts current controller instance as a parameter.
+      #
+      #   after :only => :index do |controller|
+      #     puts controller.response.inspect
+      #   end
+      #
       #--------------------------------------------------------------------------
-      [ :before, :after ].each do |hook|
-        define_method hook do |method, scope = {}|
-          puts "#{hook}: #{method.inspect}"
+      [ :before, :after ].each do |hook, &block|
+        define_method hook do |*names, &block|
+          puts "#{hook}: #{names.inspect}"
           @hooks ||= { :before => [], :after => [] }
-          @hooks[hook] << { :method => method }.merge(scope)
+          scope = names.last.is_a?(Hash) ? names.pop : {}
+          names << block if block # When invoking the hook it might be Symbol or Proc.
+          names.each do |name|
+            @hooks[hook] << { :method => name }.merge(scope)
+          end
         end
       end
 

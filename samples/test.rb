@@ -2,7 +2,12 @@ class Test < Dio::Controller
   # routes :restful, :except => :destroy
   # routes :restful, :only => [:index, :new]
 
-  before :say_hi, :only => :cancel
+  after [], :only => :index do |controller|
+    puts "--- BYE (INDEX ONLY) ---"
+    puts controller.response.inspect
+  end
+
+  before "say_hi", :only => :cancel
 
   routes do
     get "/:action/*/:id/*" => :index
