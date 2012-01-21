@@ -117,14 +117,13 @@ module Dio
       raise NotFound
     end
 
-    # Run the Dio app as a self-hosted server using Thin, Mongrel or WEBrick.
+    # Run the Dio app as a self-hosted server using Thin.
     #--------------------------------------------------------------------------
     def roll!(options = {})
-      handler = detect_rack_handler
-      handler_name = handler.name.gsub(/.*::/, '')
-      handler.run self, :Host => HOST, :Port => PORT do |server|
-        $stderr.puts "== Dio is up on #{PORT} using #{handler_name}"
-        [:INT, :TERM].each { |sig| trap(sig) { quit!(server, handler_name) } }
+      thin = Rack::Handler.get("thin")
+      thin.run self, :Host => HOST, :Port => PORT do |server|
+        $stderr.puts "== Dio is up on #{PORT} using Thin"
+        [ :INT, :TERM ].each { |signal| trap(signal) { quit!(server) } }
         server.threaded = true if server.respond_to? :threaded=
         yield server if block_given?
       end
@@ -149,22 +148,10 @@ module Dio
       super
     end
 
+    # Use Thin's hard #stop!
     #--------------------------------------------------------------------------
-    def detect_rack_handler
-      %w[ thin puma mongrel webrick ].each do |server_name|
-        begin
-          return Rack::Handler.get(server_name.to_s)
-        rescue LoadError
-        rescue NameError
-        end
-      end
-      fail "Server handler (thin, puma, mongrel, webrick) not found."
-    end
-
-    #--------------------------------------------------------------------------
-    def quit!(server, handler_name)
-      # Use Thin's hard #stop! if available, otherwise just #stop.
-      server.respond_to?(:stop!) ? server.stop! : server.stop
+    def quit!(server)
+      server.stop!
       $stderr.puts "\n== Dio is done"
     end
 
