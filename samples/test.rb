@@ -1,28 +1,33 @@
 class Test < Dio::Controller
   # routes :restful, :except => :destroy
-  # routes :restful, :only => [:index, :new]
+  routes :restful, :except => [ :index, :new ] do
+    get "/:action/*/:id/*" => :index
+    get "/list"            => :list
+    get "/cancel/:id"      => :cancel
+    any "/xexe"            => :xexe
+  end
 
-  after [], :only => :index do |controller|
+  after :only => :index do |controller|
     puts "--- BYE (INDEX ONLY) ---"
     puts controller.response.inspect
   end
 
   before "say_hi", :only => :cancel
 
-  routes do
-    get "/:action/*/:id/*" => :index
-    get "/list"          => :list
-    get "/cancel/:id"    => :cancel
-    any "/xexe"          => :xexe
-
-    # get    "/"      => :index
-    # get    "/new"   => :new
-    # post   "/"      => :create
-    # get    "/:id"   => :show
-    # get    "/edit"  => :edit
-    # put    "/:id"   => :update
-    # delete "/:id"   => :destroy
-  end
+  # routes do
+  #   get "/:action/*/:id/*" => :index
+  #   get "/list"          => :list
+  #   get "/cancel/:id"    => :cancel
+  #   any "/xexe"          => :xexe
+  # 
+  #   # get    "/"      => :index
+  #   # get    "/new"   => :new
+  #   # post   "/"      => :create
+  #   # get    "/:id"   => :show
+  #   # get    "/edit"  => :edit
+  #   # put    "/:id"   => :update
+  #   # delete "/:id"   => :destroy
+  # end
 
   def index
     puts "test/index"

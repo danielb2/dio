@@ -1,16 +1,5 @@
 require "json"
-# Free-form routes:
-#
-# routes do
-#   get  "/list"       => :list
-#   post "/cancel/:id" => :cancel
-# end
-#
-# Predefined :restful routes:
-#
-# routes :restful, :except => :delete
-# routes :restful, :only => [ :index, :new ]
-#
+
 module Dio
   class Controller
     attr_reader :request, :response, :params
@@ -48,8 +37,11 @@ module Dio
       ap params
 
       invoke(:before, action) if hooks(:before).any?
+      #
+      # Route only to public methods.
+      #
       if public_methods.include?(action.to_sym) && respond_to?(action)
-        public_send(action) # Route only to public methods.
+        public_send(action)
         invoke(:after, action) if hooks(:after).any?
       else
         raise NotFound
@@ -110,28 +102,36 @@ module Dio
           response.body = hash.to_json
         end
       end
-
+      #
+      # Routes are defined within the controller class.
       #
       # routes do
       #   verb pattern => action
       # end
       #
-      # Where +pattern+ is one of the following:
+      # The +verb+ specifies HTTP method i.e. one of "get", "post", "put", "delete",
+      # or "any". The route +pattern+ is one of the following:
       #
-      #   "/hello"                # Static.
-      #   "/hello/:id"            # With required named parameters.
-      #   "/hello/*/world/*"      # With required wildcard parameters, params[:wildcard]
-      #   "/hello.?:format?"      # With optional parameters.
-      #   /\/hello\/([\w+])/      # Regular expression.
+      #   "/hello"                # Static string.
+      #   "/hello/:id"            # Required named parameters => params[:id]
+      #   "/hello/*/world/*"      # Required wildcard parameters => params[:wildcard]
+      #   "/hello.?:format?"      # Optional parameters => params[:format] if specified.
+      #   /\/hello\/([\w+])/      # Regular expression => params[:captures]
       #
       # The +action+ is either:
       #
       #  :method                  # Public controller method to invoke.
       #  lambda { |params| ... }  # Block that accepts params and returns :method to invoke.
       #
+      # Restful routes is a shortcut that defines routing rules for :index, :new,
+      # :create, :show, :edit, :update, :destroy methods. For examlpe:
+      #
+      #   routes :restful, :except => :destroy
+      #   routes :restful, :only => [ :index, :show ]
+      #
       #------------------------------------------------------------------------
-      def routes(group = nil, scope = {}, &block)
-        puts "routes(#{group.inspect}, #{scope.inspect})"
+      def routes(*options, &block)
+        puts "routes(#{options.inspect})"
         @rules ||= begin
           self.class.instance_eval do
             [ :get, :post, :put, :delete, :any ].each do |verb|
@@ -143,11 +143,10 @@ module Dio
           []
         end
 
-        if group
-          named_routes(group, scope)
-        else
-          yield # routes do ... end
+        if options.first == :restful
+          restful_routes(*options[1..-1])
         end
+        yield if block
       end
       #
       # Define +before+ and +after+ hook methods. The hooks get executed in the
@@ -174,28 +173,24 @@ module Dio
           end
         end
       end
-
+      #
+      # routes :restful, :except => :delete
+      # routes :restful, :only => [ :index, :new ]
+      #
       #--------------------------------------------------------------------------
-      def named_routes(group, scope = {})
-        if group == :restful
-          #
-          # routes :restful, :except => :delete
-          # routes :restful, :only => [ :index, :new ]
-          #
-          only   = scope[:only]   ? Array(scope[:only])   : [ :index, :new, :create, :show, :edit, :update, :destroy ]
-          except = scope[:except] ? Array(scope[:except]) : []
-          #
-          #  Note that the routes are listed in "reverse" since the last route gets
-          #  evaluated first.
-          #
-          delete "/:id"  => :destroy if only.include?(:destroy) && !except.include?(:destroy)
-          put    "/:id"  => :update  if only.include?(:update)  && !except.include?(:update)
-          get    "/edit" => :edit    if only.include?(:edit)    && !except.include?(:edit)
-          get    "/:id"  => :show    if only.include?(:show)    && !except.include?(:show)
-          post   "/"     => :create  if only.include?(:create)  && !except.include?(:create)
-          get    "/new"  => :new     if only.include?(:new)     && !except.include?(:new)
-          get    "/"     => :index   if only.include?(:index)   && !except.include?(:index)
-        end
+      def restful_routes(scope = {})
+        puts "restful_routes(#{scope.inspect})"
+        only = scope[:only] ? Array(scope[:only]) : [ :index, :new, :create, :show, :edit, :update, :destroy ]
+        except = scope[:except] ? Array(scope[:except]) : []
+        excluded = lambda { |method| !only.include?(method) || except.include?(method) }
+
+        get    "/"     => :index   unless excluded[:index]
+        get    "/new"  => :new     unless excluded[:new]
+        post   "/"     => :create  unless excluded[:create]
+        get    "/:id"  => :show    unless excluded[:show]
+        get    "/edit" => :edit    unless excluded[:edit]
+        put    "/:id"  => :update  unless excluded[:update]
+        delete "/:id"  => :destroy unless excluded[:destroy]
       end
     end
   end
