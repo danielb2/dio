@@ -1,5 +1,10 @@
 + Basic error handling (404, etc).
 + Serving static files.
 + Before and after filters with blocks.
++ support catch(:done)
++ catch/throw
 - supports :json, :xml, :html in controllers.
+- support ERB templates
+- hello <user> sample app (form submission)
+- quickie
 

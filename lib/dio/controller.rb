@@ -9,6 +9,12 @@ module Dio
       set_router_rules
     end
 
+    # Unwind current block and return the reply back to catch(:done).
+    #--------------------------------------------------------------------------
+    def done(*reply)
+      throw :done, reply
+    end
+
     private
     # Move routing rules cached by the class to the router instance that is
     # part of incoming request. The cache gets cleared once the transfer is
@@ -68,6 +74,7 @@ module Dio
           else raise "Invalid #{before_or_after} hook"
         end
       end
+      response.status
     end
 
     #--------------------------------------------------------------------------
@@ -143,10 +150,10 @@ module Dio
           []
         end
 
+        yield if block
         if options.first == :restful
           restful_routes(*options[1..-1])
         end
-        yield if block
       end
       #
       # Define +before+ and +after+ hook methods. The hooks get executed in the

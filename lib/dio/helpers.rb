@@ -1,8 +1,56 @@
 module Dio
   module Helpers
 
+    [ :status, :headers, :body ].each do |method|
+      define_method method do |*value|                        # def status(*value)
+        __send__(:"#{method}?", *value) unless value.empty?   #  status?(*value) unless value.empty?
+        response.__send__(method)                             #  response.status
+      end                                                     # end
+    end
+
     private
 
+    #--------------------------------------------------------------------------
+    def status?(*value)
+      return !!response.status if value.empty?
+
+      return false unless value.first.is_a?(Fixnum)
+      response.status = value.first
+      true
+    end
+
+    #--------------------------------------------------------------------------
+    def headers?(*value)
+      return !!response.headers if value.empty?
+
+      return false unless value.first.is_a?(Hash)
+      if value.first.empty?
+        response.headers.clear
+      else
+        value.first.each do |key, value|
+          key = key.to_s.split('_').each { |x| x[0] = x[0].upcase }.join('-')
+          response.headers[key] = value
+        end
+      end
+      true
+    end
+
+    #--------------------------------------------------------------------------
+    def body?(*value)
+      return !!response.body if value.empty?
+
+      if value.first.is_a?(String) || value.first.respond_to?(:each)
+        response.body = *value.flatten
+        true
+      elsif value.first.is_a?(Proc)
+        # TODO: define :each
+        true
+      else
+        false
+      end
+    end
+
+    #--------------------------------------------------------------------------
     def static?
       if request.get? || request.head?
         public_directory = File.expand_path(File.join(settings.root, "public"))

@@ -49,11 +49,34 @@ module Dio
     def call(env)
       @environment, @request, @response = env, Request.new(env), Response.new
       @params = universal_nested_hash(@request.params)
-      @params[:controller] = $1 if @request.path =~ /\/(\w+)/
+      @params[:controller] = $1 if @request.path =~ /\/([\w.]+)/
       @params[:controller] ||= :home
       ap @request.path
       ap @params
-      dispatch!
+
+      reply = catch(:done) { dispatch! }
+      reply = Array(reply) unless reply.is_a?(Array)
+      #
+      # #done with single parameter:
+      #   done 200
+      #   done { "X-key" => "value }
+      #   done "body text that is a string"
+      #   done [ "body", "that", "responds", "to", ":each" ]
+      #
+      # #done with two parameters:
+      #   done 200, { "X-key" => "value }
+      #   done "body text that is a string"
+      #   done 200, [ "body", "that", "responds", "to", ":each" ]
+      #
+      # #done with three parameters:
+      #   done 200, { "X-key" => "value }, "body text that is a string"
+      #   done 200, { "X-key" => "value }, [ "body", "that", "responds", "to", ":each" ]
+      #
+      status?(reply[0]) or headers?(reply[0]) or body?(reply[0]) if reply.size > 0
+                           headers?(reply[1]) or body?(reply[1]) if reply.size > 1
+                                                 body?(reply[2]) if reply.size > 2
+
+   ap [ response.status, response.headers, response.body ]
       [ response.status, response.headers, response.body ]
     end
 
@@ -64,9 +87,9 @@ module Dio
       else
         controller = load_controller
         controller.__send__(:route!)
-        ap response.status
-        ap response.headers
-        ap response.body
+        # ap response.status
+        # ap response.headers
+        # ap response.body
       end
     rescue Exception => e
       salvage!(e)
@@ -76,15 +99,15 @@ module Dio
     def salvage!(e)
       ap e
       ap e.backtrace
-      response.headers["Content-Type"] = "text/html"
+      headers :content_type => "text/html"
       if NotFound === e
-        response.status = 404
-        response.body = "<h1>#{response.status} - Not Found</h1><p>The requested URL #{request.path} was not found on this server."
+        status 404
+        body "<h1>#{response.status} - Not Found</h1><p>The requested URL #{request.path} was not found on this server."
       else
-        response.status = 500 unless response.status.between? 400, 599
-        response.body = "<h1>#{response.status} - #{e.class}: #{e.message}</h1>"
-        if response.status >= 500 # Show backtrace for server errros.
-          response.body << "<pre>" << e.backtrace.join("\n  ") << "</pre>"
+        status = 500 unless status && status.between?(400, 599)
+        body = "<h1>#{status} - #{e.class}: #{e.message}</h1>"
+        if status >= 500 # Show backtrace for server errros.
+          body += "<pre>" << e.backtrace.join("\n  ") << "</pre>"
         end
       end
     end
@@ -103,16 +126,15 @@ module Dio
 
     #--------------------------------------------------------------------------
     def serve_static
-      response.headers['Content-Disposition'] = 'inline'
+      headers[:content_disposition] = 'inline'
       file = Rack::File.new("")                   # Root is empty, path is full file spec.
       file.path = environment["dio.static_file"]
-      response.status, headers, response.body =
+      status, headers, body =
         if file.method(:serving).arity == 0
           file.serving                            # Older Rack doesn't accept a parameter.
         else
           file.serving(environment)
         end
-      headers.each { |key, value| response.headers[key] ||= value }
     rescue Errno::ENOENT
       raise NotFound
     end

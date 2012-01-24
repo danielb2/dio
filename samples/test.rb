@@ -32,21 +32,31 @@ class Test < Dio::Controller
   def index
     puts "test/index"
     ap params
+    done 404
   end
 
   def list
     puts "test/list"
     ap params
+    done 200, "test/list"
   end
 
   def cancel
     puts "test/cancel"
     ap params
+    done "test/cancel"
   end
 
   def dynamic
     puts "test/dynamic"
     ap params
+    done 404, { "Content-Type" => "text/txt" }, "test/dynamic"
+  end
+
+  def dynamiq
+    puts "test/dynamic"
+    ap params
+    done 404, { "Content-Type" => "text/json" }
   end
 
   private
