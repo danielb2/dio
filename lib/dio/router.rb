@@ -39,7 +39,7 @@ module Dio
     # method, find matching pattern, update params keys, and return the action.
     #--------------------------------------------------------------------------
     def match(request, params)
-ap @rules
+      # ap @rules
       verb  = request.request_method.downcase.to_sym            # "GET" => :get
       rules = @rules[verb]                                      # Get the rules for the verb starting with the last rule.
       rules += @rules[:any]                                     # Append the rules for any type of request.
