@@ -37,10 +37,10 @@ module Dio
 
     #--------------------------------------------------------------------------
     def route!
-      puts "route!(#{params.inspect})"
+      # puts "route!(#{params.inspect})"
       action = request.router.match(request, params).to_sym
-      puts "router match => #{action.inspect}"
-      ap params
+      # puts "router match => #{action.inspect}"
+      # ap params
 
       invoke(:before, action) if hooks(:before).any?
       #
@@ -63,7 +63,7 @@ module Dio
 
     #--------------------------------------------------------------------------
     def invoke(before_or_after, action)
-      puts "invoke(#{before_or_after.inspect}, #{action.inspect})"
+      # puts "invoke(#{before_or_after.inspect}, #{action.inspect})"
       self.class.hooks[before_or_after].each do |hook|
         next if hook[:only] && !Array(hook[:only]).include?(action)
         next if hook[:except] && Array(hook[:except]).include?(action)
@@ -83,7 +83,7 @@ module Dio
 
       #--------------------------------------------------------------------------
       def method_added(method)
-        puts "instance method #{method.inspect} added"
+        # puts "instance method #{method.inspect} added"
         if public_instance_methods.include?(method) && !@adding_method
           begin
             @adding_method = true
@@ -106,7 +106,7 @@ module Dio
           vars = instance_variables - [:@request, :@response, :@params]
           hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
           response.headers["Content-Type"] = "application/json"
-          response.body = hash.to_json
+          response.body = [ hash.to_json ]
         end
       end
       #

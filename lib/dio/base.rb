@@ -51,8 +51,9 @@ module Dio
       @params = universal_nested_hash(@request.params)
       @params[:controller] = $1 if @request.path =~ /\/([\w.]+)/
       @params[:controller] ||= :home
-      ap @request.path
-      ap @params
+
+      # ap @request.path
+      # ap @params
 
       reply = catch(:done) { dispatch! }
       reply = Array(reply) unless reply.is_a?(Array)
@@ -76,7 +77,7 @@ module Dio
                            headers?(reply[1]) or body?(reply[1]) if reply.size > 1
                                                  body?(reply[2]) if reply.size > 2
 
-   ap [ response.status, response.headers, response.body ]
+## ap [ response.status, response.headers, response.body ]
       [ response.status, response.headers, response.body ]
     end
 
@@ -97,8 +98,8 @@ module Dio
 
     #--------------------------------------------------------------------------
     def salvage!(e)
-      ap e
-      ap e.backtrace
+      # ap e
+      # ap e.backtrace
       headers :content_type => "text/html"
       if NotFound === e
         status 404
@@ -113,11 +114,11 @@ module Dio
     end
 
     # Load controller file and create an instance of controller class.
+    # TODO: track mktime and use require if the file hasn't changed.
     #--------------------------------------------------------------------------
     def load_controller
       controller_file_name = "#{settings.root}/#{@params[:controller]}.rb"
-      # TODO: track mktime and use require if the file hasn't changed.
-      puts "Loading #{controller_file_name}"
+      # puts "Loading #{controller_file_name}"
       load controller_file_name
       constantize(@params[:controller]).new(self)     # TODO: handle missing class.
     rescue LoadError
