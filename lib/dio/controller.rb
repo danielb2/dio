@@ -32,7 +32,7 @@ module Dio
       request.router.any "/:action/?:id?.?:format?", lambda { |params| params[:action] }
       # ap request.router.rules
     ensure
-      self.class.rules = []
+      self.class.rules = nil
     end
 
     #--------------------------------------------------------------------------
@@ -138,7 +138,7 @@ module Dio
       #
       #------------------------------------------------------------------------
       def routes(*options, &block)
-        puts "routes(#{options.inspect})"
+        # puts "routes(#{options.inspect})"
         @rules ||= begin
           self.class.instance_eval do
             [ :get, :post, :put, :delete, :any ].each do |verb|
