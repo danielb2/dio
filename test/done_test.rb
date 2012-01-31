@@ -71,5 +71,3 @@ class DoneTest < DioTest::Base
   #   done 200, { "X-key" => "value }, [ "body", "that", "responds", "to", ":each" ]
   #--------------------------------------------------------------------------
 end
-
-DoneTest.new
