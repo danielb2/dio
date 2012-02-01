@@ -1,3 +1,8 @@
+# Copyright (c) 2012 Michael Dvorkin
+#
+# Quickie is freely distributable under the terms of MIT license.
+# See LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 # routes do
 #   verb pattern => action
 # end
@@ -16,7 +21,7 @@
 #  :method                  # Public controller method to invoke.
 #  lambda { |params| ... }  # Block that accepts params and returns :method to invoke.
 #
-class RoutingTest < DioTest::Base
+class RoutesTest < DioTest::Base
   #
   # Default route: any "/" => :index
   #------------------------------------------------------------------------
@@ -29,12 +34,12 @@ class RoutingTest < DioTest::Base
   } do
     response = app.get("/post")
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :post => {
         :controller => :post
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
   end
   #
   # Deafult routes: any "/:action/?:id?.?:format?" => lambda { |params| params[:action] }
@@ -48,6 +53,7 @@ class RoutingTest < DioTest::Base
   } do
     response = app.get("/post/edit")                 # /:action
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :post => {
         :controller => :post,
@@ -55,10 +61,10 @@ class RoutingTest < DioTest::Base
         :action     => :edit
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
 
     response = app.get("/post/edit/42")              # /:action/:id
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :post => {
         :controller => :post,
@@ -67,10 +73,10 @@ class RoutingTest < DioTest::Base
         :id         => "42"
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
   
     response = app.get("/post/edit/42.xml")          # /:action/:id.:format
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :post => {
         :controller => :post,
@@ -80,7 +86,6 @@ class RoutingTest < DioTest::Base
         :format     => "xml"
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
   end
   #
   # Static string route.
@@ -98,12 +103,12 @@ class RoutingTest < DioTest::Base
   } do
     response = app.get("/post/ping")
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :ping => {
         :controller => :post
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
   end
   #
   # Required named parameters.
@@ -121,6 +126,7 @@ class RoutingTest < DioTest::Base
   } do
     response = app.get("/post/ping/hello/world")
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :ping => {
         :controller => :post,
@@ -129,19 +135,19 @@ class RoutingTest < DioTest::Base
         :tag        => "world"
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
     #
     # Undeclared extra parameter - route not found.
     #
     response = app.get("/post/ping/hello/world/42")
     response.code.should == "404"
+    response.html?.should == true
     response.body.should =~ /404 - Not Found/
-    response["Content-Type"].should == "text/html"
     #
     # Missing :tag parameter - fall back to default /:action/:id rule.
     #
     response = app.get("/post/ping/hello")
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :ping => {
         :controller => :post,
@@ -150,12 +156,12 @@ class RoutingTest < DioTest::Base
         :id         => "hello"
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
     #
     # Missing :name and :tag parameters - fall back to default /:action/:id rule.
     #
     response = app.get("/post/ping")
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :ping => {
         :controller => :post,
@@ -163,7 +169,6 @@ class RoutingTest < DioTest::Base
         :action     => "ping"
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
   end
   #
   # Required wildcard parameters.
@@ -181,6 +186,7 @@ class RoutingTest < DioTest::Base
   } do
     response = app.get("/post/ping/hello/world/42")
     response.code.should == "200"
+    response.json?.should == true
     response.body.should == {
       :ping => {
         :controller => :post,
@@ -189,6 +195,59 @@ class RoutingTest < DioTest::Base
         :id         => "42"
       }
     }.to_json
-    response["Content-Type"].should == "application/json"
+    #
+    # Missing wildcard items - fall back to default /:action/:id rule.
+    #
+    response = app.get("/post/ping")
+    response.code.should == "200"
+    response.json?.should == true
+    response.body.should == {
+      :ping => {
+        :controller => :post,
+        :captures   => [ "ping", nil, nil ],
+        :action     => "ping"
+      }
+    }.to_json
+  end
+  #
+  # Optional parameters.
+  #------------------------------------------------------------------------
+  controller %{
+    class Post < Dio::Controller
+      routes do
+        any "/ping/:id/:name?.?:ext?" => :ping
+      end
+
+      def ping
+        @ping = params
+      end
+    end
+  } do
+    response = app.get("/post/ping/42/restart.txt")
+    response.code.should == "200"
+    response.json?.should == true
+    response.body.should == {
+      :ping => {
+        :controller => :post,
+        :captures   => %w[ 42 restart txt ],
+        :id         => "42",
+        :name       => "restart",
+        :ext        => "txt"
+      }
+    }.to_json
+    #
+    # Missing optional parameter.
+    #
+    response = app.get("/post/ping/42/restart")
+    response.code.should == "200"
+    response.json?.should == true
+    response.body.should == {
+      :ping => {
+        :controller => :post,
+        :captures   => [ "42", "restart", nil ],
+        :id         => "42",
+        :name       => "restart"
+      }
+    }.to_json
   end
 end

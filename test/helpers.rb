@@ -1,7 +1,22 @@
+# Copyright (c) 2012 Michael Dvorkin
+#
+# Quickie is freely distributable under the terms of MIT license.
+# See LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 require "net/http"
 require "rack"
 require "rack/lint"
 require "thin"
+
+module Net                                                        #
+  class HTTPResponse                                              # Add convenience methods to response.
+    %w(html js json txt xml gif png mp3 wav).each do |ext|        #
+      define_method :"#{ext}?" do                                 # def json?
+        self["Content-Type"] == Rack::Mime.mime_type(".#{ext}")   #   self["Content-Type"] == "application/json"
+      end                                                         # end
+    end                                                           #
+  end
+end
 
 class DioTest
   class TestApp < Dio::Base

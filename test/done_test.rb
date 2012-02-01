@@ -1,3 +1,8 @@
+# Copyright (c) 2012 Michael Dvorkin
+#
+# Quickie is freely distributable under the terms of MIT license.
+# See LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 class DoneTest < DioTest::Base
   # Test various combinations of Dio::Controller#done
   #
@@ -16,22 +21,22 @@ class DoneTest < DioTest::Base
   } do
     response = app.get("/")
     response.code.should == "404"
+    response.html?.should == true
     response.body.should == ""
-    response["Content-Type"].should == "text/html"
   end
 
   controller %{
     class Home < Dio::Controller
       def index
-        done "X-Key" => "value"
+        done "X-Dio" => "rocks"
       end
     end
   } do
     response = app.get("/")
     response.code.should == "200"
+    response.html?.should == true
     response.body.should == ""
-    response["X-Key"].should == "value"
-    response["Content-Type"].should == "text/html"
+    response["X-Dio"].should == "rocks"
   end
 
   controller %{
@@ -43,8 +48,8 @@ class DoneTest < DioTest::Base
   } do
     response = app.get("/")
     response.code.should == "200"
+    response.html?.should == true
     response.body.should == "index"
-    response["Content-Type"].should == "text/html"
   end
 
   controller %{
@@ -56,8 +61,8 @@ class DoneTest < DioTest::Base
   } do
     response = app.get("/")
     response.code.should == "200"
+    response.html?.should == true
     response.body.should == "helloworld"
-    response["Content-Type"].should == "text/html"
   end
 
   # #done with two parameters:

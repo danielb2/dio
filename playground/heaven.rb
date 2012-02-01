@@ -1,4 +1,4 @@
-class Test < Dio::Controller
+class Heaven < Dio::Controller
   # routes :restful, :except => :destroy
   routes :restful, :except => [ :index, :new ] do
     get "/:action/*/:id/*" => :index
