@@ -86,32 +86,42 @@ module Dio
     class << self
       attr_accessor :rules, :hooks
 
+      # Override public methods to automagically call render at the end.
       #--------------------------------------------------------------------------
-      def method_added(method)
-        # puts "instance method #{method.inspect} added"
-        if public_instance_methods.include?(method) && !@adding_method
+      def method_added(action)
+        # puts "instance method #{action.inspect} added"
+        if public_instance_methods.include?(action) && !@adding_method
           begin
             @adding_method = true
-            add_json_renderer_for(method)
+            auto_render(action, :json)
           ensure
             @adding_method = false
           end
         end
       end
 
+      # Invoke the original action, then do the rendering.
       #--------------------------------------------------------------------------
-      def add_json_renderer_for(method)
-        alias_method :"original_#{method}", method            # Save the original method.
-        remove_method method                                  # Now remove it.
-        define_method method do                               # Redefine the method with the method we've just removed.
-          status = send :"original_#{method}"                 # Invoke the saved method.
-                                                              # The code we want to execute after invoking the method.
+      def auto_render(action, format)
+        alias_method :"original_#{action}", action            # Stash the original action.
+        remove_method action                                  # Now we can remove it.
+        define_method action do                               # Redefine the action we've just removed.
+          #
+          # Invoke stashed action (the original one defined by user).
+          #
+          status = send :"original_#{action}"
           return status unless response.status == 200 && response.body.empty?
-
-          vars = instance_variables - [:@request, :@response, :@params]
-          hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
-          response.headers["Content-Type"] = "application/json"
-          response.body = [ hash.to_json ]
+          #
+          # So far we support only JSON renderer. Grab all instance variables
+          # except @request, @response, and @params and convert them to JSON hash.
+          #
+          case format
+          when :json
+            vars = instance_variables - [ :@request, :@response, :@params ]
+            hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
+            response.headers["Content-Type"] = "application/json"
+            response.body = [ hash.to_json ]
+          end
         end
       end
       #
