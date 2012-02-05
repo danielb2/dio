@@ -191,6 +191,6 @@ module Dio
     set :host, 'localhost'
     set :port, 3131
     set :root, nil  # The actual value is set when the App < Dio::Base
-    set :default_format, :json
+    set :default_format, :html
   end
 end

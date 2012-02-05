@@ -4,7 +4,7 @@ class Heaven < Dio::Controller
     get "/:action/*/:id/*" => :index
     get "/list"            => :list
     get "/cancel/:id"      => :cancel
-    any "/xexe"            => :xexe
+    get "/hi"              => :hi
   end
 
   after :only => :index do |controller|
@@ -12,7 +12,7 @@ class Heaven < Dio::Controller
     puts controller.response.inspect
   end
 
-  before "say_hi", :only => :cancel
+  before :earn, :only => :hi
 
   # routes do
   #   get "/:action/*/:id/*" => :index
@@ -47,6 +47,10 @@ class Heaven < Dio::Controller
     done "test/cancel"
   end
 
+  def hi
+    @name = ("a".."z").to_a.shuffle[0,8].join.capitalize
+  end
+
   def dynamic
     puts "test/dynamic"
     ap params
@@ -60,7 +64,8 @@ class Heaven < Dio::Controller
   end
 
   private
-  def say_hi
-    puts "HI (CANCEL ONLY)"
+  def earn
+    puts "earh (/hi only)"
+    @rand = rand(1_000_000)
   end
 end
