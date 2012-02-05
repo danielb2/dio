@@ -12,11 +12,20 @@ module Dio
   PORT = 3131
 
   class Request < Rack::Request
-    attr_reader :router
+    attr_reader :router, :format
 
-    def initialize(env)
+    def initialize(env, settings)
       @router = Dio::Router.new
+      @format = mime_format(env) || settings.default_format
       super(env)
+    end
+
+    private
+    def mime_format(env)
+      ext = File.extname(env["PATH_INFO"])
+      if Rack::Mime::MIME_TYPES.include?(ext)
+        ext[1..-1].to_sym
+      end
     end
   end
 
@@ -49,7 +58,7 @@ module Dio
 
     #--------------------------------------------------------------------------
     def call(env)
-      @environment, @request, @response = env, Request.new(env), Response.new
+      @environment, @request, @response = env, Request.new(env, settings), Response.new
       @params = universal_nested_hash(@request.params)
       @params[:controller] = $1 if @request.path =~ /\/([\w.]+)/
       @params[:controller] ||= :home
@@ -68,7 +77,7 @@ module Dio
       #
       # #done with two parameters:
       #   done 200, { "X-key" => "value }
-      #   done "body text that is a string"
+      #   done 200, "body text that is a string"
       #   done 200, [ "body", "that", "responds", "to", ":each" ]
       #
       # #done with three parameters:
@@ -183,5 +192,6 @@ module Dio
     # Default settings.
     #--------------------------------------------------------------------------
     set :root, nil  # The actual value is set when the App < Dio::Base
+    set :default_format, :json
   end
 end
