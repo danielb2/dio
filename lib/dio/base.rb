@@ -8,9 +8,6 @@ require "rack"
 require "awesome_print"
 
 module Dio
-  HOST = 'localhost'
-  PORT = 3131
-
   class Request < Rack::Request
     attr_reader :router, :format
 
@@ -155,14 +152,14 @@ module Dio
     #--------------------------------------------------------------------------
     def roll!(options = {})
       thin = Rack::Handler.get("thin")
-      thin.run self, :Host => HOST, :Port => PORT do |server|
-        $stderr.puts "== Dio is up on #{PORT} using Thin"
+      thin.run self, :Host => settings.host, :Port => settings.port do |server|
+        $stderr.puts "== Dio is up on #{settings.port} using Thin"
         [ :INT, :TERM ].each { |signal| trap(signal) { quit!(server) } }
         server.threaded = true if server.respond_to? :threaded=
         yield server if block_given?
       end
     rescue Errno::EADDRINUSE => e
-      $stderr.puts "== Someone is already up on #{PORT}!"
+      $stderr.puts "== Someone is already up on #{settings.port}!"
     end
 
     private
@@ -191,6 +188,8 @@ module Dio
 
     # Default settings.
     #--------------------------------------------------------------------------
+    set :host, 'localhost'
+    set :port, 3131
     set :root, nil  # The actual value is set when the App < Dio::Base
     set :default_format, :json
   end
