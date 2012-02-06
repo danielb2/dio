@@ -2,10 +2,10 @@
 require File.expand_path('../lib/dio/version', __FILE__)
 
 Gem::Specification.new do |gem|
-  gem.authors       = ["Daniel Bretoi"]
-  gem.email         = ["nefar@otherware.org"]
-  gem.description   = %q{TODO: Write a gem description}
-  gem.summary       = %q{TODO: Write a gem summary}
+  gem.authors       = ["Michael Dvorkin", "Daniel Bretoi"]
+  gem.email         = [""]
+  gem.description   = %q{A lightweight web framework}
+  gem.summary       = %q{A lightweight web framework}
   gem.homepage      = ""
 
   gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
