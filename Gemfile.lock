@@ -1,3 +1,11 @@
+PATH
+  remote: .
+  specs:
+    dio (0.0.1)
+      awesome_print
+      rack
+      thin
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -15,7 +23,5 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  awesome_print
+  dio!
   quickie
-  rack
-  thin
