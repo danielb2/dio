@@ -4,13 +4,14 @@
 # See LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
 require "json"
+require "tilt"
 
 module Dio
   class Controller
-    attr_reader :request, :response, :params
+    attr_reader :request, :response, :params, :settings
 
     def initialize(app)
-      @request, @response, @params = app.request, app.response, app.params
+      @request, @response, @params, @settings = app.request, app.response, app.params, app.settings
       set_router_rules
     end
 
@@ -83,6 +84,16 @@ module Dio
     end
 
     #--------------------------------------------------------------------------
+    def find_template_for(action)
+      path = "#{settings.root}/views/#{self.class.name.downcase}/#{action}.#{request.format}."
+      [ :erb, :haml ].each do |engine|
+        path.sub!(/\.\w*$/, ".#{engine}")
+        return path, engine if File.readable?(path)
+      end
+      nil
+    end
+
+    #--------------------------------------------------------------------------
     class << self
       attr_accessor :rules, :hooks
 
@@ -93,7 +104,7 @@ module Dio
         if public_instance_methods.include?(action) && !@adding_method
           begin
             @adding_method = true
-            auto_render(action, :json)
+            auto_render(action)
           ensure
             @adding_method = false
           end
@@ -102,25 +113,30 @@ module Dio
 
       # Invoke the original action, then do the rendering.
       #--------------------------------------------------------------------------
-      def auto_render(action, format)
+      def auto_render(action)
         alias_method :"original_#{action}", action            # Stash the original action.
         remove_method action                                  # Now we can remove it.
         define_method action do                               # Redefine the action we've just removed.
           #
           # Invoke stashed action (the original one defined by user).
           #
-          status = send :"original_#{action}"
-          return status unless response.status == 200 && response.body.empty?
+          status = __send__ :"original_#{action}"
+          return status if response.status != 200 || !response.body.empty?
           #
           # So far we support only JSON renderer. Grab all instance variables
           # except @request, @response, and @params and convert them to JSON hash.
           #
-          case format
+          case request.format
           when :json
             vars = instance_variables - [ :@request, :@response, :@params ]
             hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
             response.headers["Content-Type"] = "application/json"
             response.body = [ hash.to_json ]
+          when :html
+            path, engine = find_template_for(action)
+            raise "Missing HTML template for #{self.class}##{action}" if !path || !engine
+            template = Tilt[engine]
+            response.body = [ template.new(path).render(self) ]
           end
         end
       end

@@ -8,15 +8,21 @@ require "rack"
 require "awesome_print"
 
 module Dio
-  HOST = 'localhost'
-  PORT = 3131
-
   class Request < Rack::Request
-    attr_reader :router
+    attr_reader :router, :format
 
-    def initialize(env)
+    def initialize(env, settings)
       @router = Dio::Router.new
+      @format = mime_format(env) || settings.default_format
       super(env)
+    end
+
+    private
+    def mime_format(env)
+      ext = File.extname(env["PATH_INFO"])
+      if Rack::Mime::MIME_TYPES.include?(ext)
+        ext[1..-1].to_sym
+      end
     end
   end
 
@@ -49,7 +55,7 @@ module Dio
 
     #--------------------------------------------------------------------------
     def call(env)
-      @environment, @request, @response = env, Request.new(env), Response.new
+      @environment, @request, @response = env, Request.new(env, settings), Response.new
       @params = universal_nested_hash(@request.params)
       @params[:controller] = $1 if @request.path =~ /\/([\w.]+)/
       @params[:controller] ||= :home
@@ -68,7 +74,7 @@ module Dio
       #
       # #done with two parameters:
       #   done 200, { "X-key" => "value }
-      #   done "body text that is a string"
+      #   done 200, "body text that is a string"
       #   done 200, [ "body", "that", "responds", "to", ":each" ]
       #
       # #done with three parameters:
@@ -146,14 +152,14 @@ module Dio
     #--------------------------------------------------------------------------
     def roll!(options = {})
       thin = Rack::Handler.get("thin")
-      thin.run self, :Host => HOST, :Port => PORT do |server|
-        $stderr.puts "== Dio is up on #{PORT} using Thin"
+      thin.run self, :Host => settings.host, :Port => settings.port do |server|
+        $stderr.puts "== Dio is up on #{settings.port} using Thin"
         [ :INT, :TERM ].each { |signal| trap(signal) { quit!(server) } }
         server.threaded = true if server.respond_to? :threaded=
         yield server if block_given?
       end
     rescue Errno::EADDRINUSE => e
-      $stderr.puts "== Someone is already up on #{PORT}!"
+      $stderr.puts "== Someone is already up on #{settings.port}!"
     end
 
     private
@@ -182,6 +188,9 @@ module Dio
 
     # Default settings.
     #--------------------------------------------------------------------------
+    set :host, 'localhost'
+    set :port, 3131
     set :root, nil  # The actual value is set when the App < Dio::Base
+    set :default_format, :html
   end
 end
