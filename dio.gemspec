@@ -16,6 +16,7 @@ Gem::Specification.new do |gem|
   gem.version       = Dio::VERSION
 
   gem.add_dependency 'rack'
+  gem.add_dependency 'tilt'
   gem.add_dependency 'awesome_print'
   gem.add_dependency 'thin'
   gem.add_development_dependency 'quickie'
