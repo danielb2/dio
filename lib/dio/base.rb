@@ -217,6 +217,13 @@ module Dio
       $stderr.puts "\n== Dio is done"
     end
 
+    def new(*args, &block)
+      builder = Rack::Builder.new
+      builder.new new!(*args, &block)
+      builder.to_app
+    end
+    alias new! new unless method_defined? :new!
+
     # Default settings.
     #--------------------------------------------------------------------------
     set :host, 'localhost'
