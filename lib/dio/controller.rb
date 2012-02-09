@@ -8,11 +8,11 @@ require "tilt"
 
 module Dio
   class Controller
-    attr_reader :request, :response, :params, :settings
+    attr_reader :request, :response, :params, :settings, :routes
 
     def initialize(app)
       @request, @response, @params, @settings = app.request, app.response, app.params, app.settings
-      set_router_rules
+      initialize_routes
     end
 
     # Unwind current block and return the reply back to catch(:done).
@@ -22,29 +22,26 @@ module Dio
     end
 
     private
-    # Move routing rules cached by the class to the router instance that is
-    # part of incoming request. The cache gets cleared once the transfer is
-    # complete so that the next time class gets loaded its cache is empty.
+
+    # Initialize the routes instance by processing routing rules set up when
+    # the class was loaded. Append two default routing rules at the end.
     #--------------------------------------------------------------------------
-    def set_router_rules
-      self.class.rules ||= []
+    def initialize_routes
+      @routes = Dio::Router.new
+      self.class.rules ||= []           # routes { ... } block is optional and if it's missing the rules are nil.
       self.class.rules.each do |rule|
-        request.router.__send__(*rule)
+        @routes.__send__(*rule)
       end
-      #
-      # Append two default rules.
-      #
-      request.router.any "/", :index
-      request.router.any "/:action/?:id?.?:format?", lambda { |params| params[:action] }
-      # ap request.router.rules
-    ensure
-      self.class.rules = nil
+      @routes.any "/", :index
+      @routes.any "/:action/?:id?.?:format?", lambda { |params| params[:action] }
+      # ap @routes
     end
 
     #--------------------------------------------------------------------------
     def route!
+      # ap self.class.hooks
       # puts "route!(#{params.inspect})"
-      action = request.router.match(request, params).to_sym
+      action = routes.match(request, params).to_sym
       # puts "router match => #{action.inspect}"
       # ap params
 
@@ -58,8 +55,6 @@ module Dio
       else
         raise NotFound
       end
-    ensure
-      self.class.hooks = nil
     end
 
     #--------------------------------------------------------------------------
@@ -128,7 +123,7 @@ module Dio
           #
           case request.format
           when :json
-            vars = instance_variables - [ :@request, :@response, :@params ]
+            vars = instance_variables - [ :@request, :@response, :@params, :@settings, :@routes ]
             hash = Hash[ vars.map { |var| [ var.to_s[1..-1], instance_variable_get(var) ] } ]
             response.headers["Content-Type"] = "application/json"
             response.body = [ hash.to_json ]

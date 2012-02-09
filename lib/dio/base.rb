@@ -12,7 +12,6 @@ module Dio
     attr_reader :router, :format
 
     def initialize(env, settings)
-      @router = Dio::Router.new
       @format = mime_format(env) || settings.default_format
       super(env)
     end
@@ -37,6 +36,11 @@ module Dio
 
     attr_accessor :environment, :request, :response, :params
 
+    #--------------------------------------------------------------------------
+    def initialize
+      @controllers = {}
+    end
+
     # Set configuration value. All we do is define two accessor methods that
     # return the requested value (as is and boolean).
     #--------------------------------------------------------------------------
@@ -57,8 +61,7 @@ module Dio
     def call(env)
       @environment, @request, @response = env, Request.new(env, settings), Response.new
       @params = universal_nested_hash(@request.params)
-      @params[:controller] = $1 if @request.path =~ /\/([\w.]+)/
-      @params[:controller] ||= :home
+      @params[:controller] = @request.path[/\/([\w.]+)/, 1] || :home
 
       # ap @request.path
       # ap @params
@@ -121,14 +124,42 @@ module Dio
       end
     end
 
-    # Load controller file and create an instance of controller class.
-    # TODO: track mktime and use require if the file hasn't changed.
+    # Load controller file and create an instance of controller class. The way
+    # it works is as follows:
+    #
+    # If controller file hasn't been loaded before then:
+    #   - require controller file
+    #   - update controllers cache
+    # Else if controller file has changed then:
+    #   - remove controller class
+    #   - reload controller file
+    #   - update controllers cache
+    # Else:
+    #   - do nothing (controller has been loaded and hasn't changed since)
+    #
     #--------------------------------------------------------------------------
     def load_controller
-      controller_file_name = "#{settings.root}/#{@params[:controller]}.rb"
-      # puts "Loading #{controller_file_name}"
-      load controller_file_name
-      constantize(@params[:controller]).new(self)     # TODO: handle missing class.
+      controller_file = "#{settings.root}/#{@params[:controller]}.rb"
+      last_updated_at = File.mtime(controller_file)
+      #
+      # Check controllers cache to see whether the controller file name entry
+      # is empty, stale, or up-to-date.
+      #
+      if !@controllers.key?(controller_file)                  # Empty.
+        require controller_file
+        @controllers[controller_file] = last_updated_at
+      elsif last_updated_at > @controllers[controller_file]   # Stale.
+        Object.__send__(:remove_const, @params[:controller].capitalize.to_sym)  # TODO: capitalize => CamelCase
+        load controller_file
+        @controllers[controller_file] = last_updated_at
+      end
+      #
+      # Now that the controller file has been loaded create a new instance of
+      # the controller class.
+      #
+      # TODO: handle missing class name.
+      #
+      constantize(@params[:controller]).new(self)
     rescue LoadError
       raise NotFound
     end

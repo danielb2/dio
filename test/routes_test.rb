@@ -22,6 +22,7 @@
 #  lambda { |params| ... }  # Block that accepts params and returns :method to invoke.
 #
 class RoutesTest < DioTest::Base
+  app.set :default_format, :json
   #
   # Default route: any "/" => :index
   #------------------------------------------------------------------------
@@ -74,16 +75,16 @@ class RoutesTest < DioTest::Base
       }
     }.to_json
   
-    response = app.get("/post/edit/42.xml")          # /:action/:id.:format
+    response = app.get("/post/edit/42.json")          # /:action/:id.:format
     response.code.should == "200"
     response.json?.should == true
     response.body.should == {
       :post => {
         :controller => :post,
-        :captures   => [ :edit, "42", "xml" ],
+        :captures   => [ :edit, "42", "json" ],
         :action     => :edit,
         :id         => "42",
-        :format     => "xml"
+        :format     => "json"
       }
     }.to_json
   end
@@ -225,16 +226,8 @@ class RoutesTest < DioTest::Base
   } do
     response = app.get("/post/ping/42/restart.txt")
     response.code.should == "200"
-    response.json?.should == true
-    response.body.should == {
-      :ping => {
-        :controller => :post,
-        :captures   => %w[ 42 restart txt ],
-        :id         => "42",
-        :name       => "restart",
-        :ext        => "txt"
-      }
-    }.to_json
+    response.json?.should == false
+    response.body.should == ""
     #
     # Missing optional parameter.
     #

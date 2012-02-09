@@ -4,6 +4,8 @@
 # See LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
 class DoneTest < DioTest::Base
+  app.set :default_format, :json
+  #
   # Test various combinations of Dio::Controller#done
   #
   # #done with single parameter:

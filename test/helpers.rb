@@ -36,6 +36,10 @@ class DioTest
         http.request(request)
       end
     end
+
+    def set(key, value)
+      settings.set(key, value)
+    end
   end
 
   class Runner
@@ -64,10 +68,24 @@ class DioTest
     def self.app
       @@app
     end
+    #
+    # Reset timestamps in the controller cache to make sure newly
+    # created controller file gets properly loaded.
+    #
+    def self.expire_controllers_cache
+      cache = @@app.instance_variable_get(:@controllers)
+      unless cache.empty?
+        cache.each do |file, mtime|
+          cache[file] = mtime - 3600
+        end
+        @@app.instance_variable_set(:@controllers, cache)
+      end
+    end
 
     def self.controller(contents, &block)
-      controller = contents.match(/class\s+(\w+)\s*<\s*Dio/)[1]
+      controller = contents[/class\s+(\w+)\s*<\s*Dio/, 1]
       raise "Invalid controller class" unless controller
+      expire_controllers_cache
       begin
         file = File.expand_path(File.dirname(__FILE__)) << "/#{controller.downcase}.rb"
         File.open(file, "w") { |f| f.write(contents) }
