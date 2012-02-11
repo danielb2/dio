@@ -20,4 +20,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'awesome_print'
   gem.add_dependency 'thin'
   gem.add_development_dependency 'quickie'
+  gem.add_development_dependency 'pry'
 end

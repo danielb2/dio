@@ -34,10 +34,13 @@ module Dio
   class Base
     include Dio::Helpers
 
-    attr_accessor :environment, :request, :response, :params
+    attr_accessor :environment, :request, :response, :params, :app
+    attr_accessor :app
 
     #--------------------------------------------------------------------------
-    def initialize
+    def initialize(app=nil)
+      super()
+      @app = app
       @controllers = {}
     end
 
@@ -53,10 +56,16 @@ module Dio
 
     # Make settings available through app.settings.key instead of app.class.key
     #--------------------------------------------------------------------------
+    def self.settings
+      self
+    end
     def settings
       self.class
     end
 
+    def self.call(env)
+      new.call(env)
+    end
     #--------------------------------------------------------------------------
     def call(env)
       @environment, @request, @response = env, Request.new(env, settings), Response.new
@@ -181,7 +190,7 @@ module Dio
 
     # Run the Dio app as a self-hosted server using Thin.
     #--------------------------------------------------------------------------
-    def roll!(options = {})
+    def self.roll!(options = {})
       thin = Rack::Handler.get("thin")
       thin.run self, :Host => settings.host, :Port => settings.port do |server|
         $stderr.puts "== Dio is up on #{settings.port} using Thin"
@@ -217,12 +226,15 @@ module Dio
       $stderr.puts "\n== Dio is done"
     end
 
-    def new(*args, &block)
-      builder = Rack::Builder.new
-      builder.new new!(*args, &block)
-      builder.to_app
+    class << self
+      alias new! new unless method_defined? :new!
+      def new(*args, &block)
+        builder = Rack::Builder.new
+        builder.use Rack::CommonLogger
+        builder.run new!(*args, &block)
+        builder.to_app
+      end
     end
-    alias new! new unless method_defined? :new!
 
     # Default settings.
     #--------------------------------------------------------------------------
